@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Customer Churn Prediction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: var(--dark-color);
+        }
+
+        .navbar {
+            background-color: var(--secondary-color);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: white;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 5rem 0;
+            margin-bottom: 3rem;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .result-highlight {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .footer {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+
+        .model-comparison-chart {
+            height: 400px;
+        }
+
+        .feature-importance-chart {
+            height: 500px;
+        }
+
+        .risk-indicator {
+            width: 100%;
+            height: 20px;
+            border-radius: 10px;
+            background: linear-gradient(to right, var(--success-color), var(--warning-color), var(--danger-color));
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .risk-pointer {
+            position: absolute;
+            top: -5px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 15px solid var(--dark-color);
+            transform: translateX(-10px);
+        }
+
+        .currency-input {
+            position: relative;
+        }
+
+        .currency-input:before {
+            content: "₹";
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #495057;
+            font-weight: bold;
+            z-index: 1;
+        }
+
+        .currency-input input {
+            padding-left: 30px;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+
+        .risk-badge {
+            font-size: 1rem;
+            padding: 0.5em 1em;
+            border-radius: 50px;
+            color: white;
+        }
+
+        .risk-low {
+            background-color: var(--success-color);
+        }
+
+        .risk-medium {
+            background-color: var(--warning-color);
+        }
+
+        .risk-high {
+            background-color: var(--danger-color);
+        }
+
+        .tooltip-icon {
+            color: var(--primary-color);
+            cursor: help;
+        }
+
+        .segmentation-card {
+            transition: all 0.3s ease;
+        }
+
+        .segmentation-card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .insight-card {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 3rem 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>SaaS Churn Predictor
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#predict"><i class="fas fa-calculator me-1"></i> Predict</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#insights"><i class="fas fa-chart-pie me-1"></i> Insights</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#segmentation"><i class="fas fa-users me-1"></i> Segmentation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#trends"><i class="fas fa-calendar-alt me-1"></i> Trends</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 fw-bold mb-4">Predict & Prevent Customer Churn</h1>
+            <p class="lead mb-5">AI-powered insights to retain your most valuable customers</p>
+            <a href="#predict" class="btn btn-light btn-lg px-4 me-2"><i class="fas fa-bolt me-2"></i>Quick Predict</a>
+            <a href="#demo" class="btn btn-outline-light btn-lg px-4"><i class="fas fa-play-circle me-2"></i>See Demo</a>
+        </div>
+    </section>
+
+    <section id="predict" class="container mb-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h3 class="mb-0"><i class="fas fa-user-shield me-2"></i>Customer Churn Risk Assessment</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="predictionForm">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="customerType" class="form-label">Customer Type
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Select the type of customer"></i>
+                                    </label>
+                                    <select class="form-select" id="customerType" required>
+                                        <option value="">Select...</option>
+                                        <option value="0">New (0-3 months)</option>
+                                        <option value="1">Established (4-12 months)</option>
+                                        <option value="2">Long-term (1+ years)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="companySize" class="form-label">Company Size (Employees)
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Approximate number of employees"></i>
+                                    </label>
+                                    <select class="form-select" id="companySize" required>
+                                        <option value="">Select...</option>
+                                        <option value="0">1-10</option>
+                                        <option value="1">11-50</option>
+                                        <option value="2">51-200</option>
+                                        <option value="3">201-1000</option>
+                                        <option value="4">1000+</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="subscriptionLength" class="form-label">Subscription Length (months)
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="How long the customer has been subscribed"></i>
+                                    </label>
+                                    <input type="number" class="form-control" id="subscriptionLength" min="1" max="60" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="monthlyBilling" class="form-label">Monthly Billing Amount (₹)
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Average monthly billing amount"></i>
+                                    </label>
+                                    <div class="currency-input">
+                                        <input type="number" step="100" class="form-control" id="monthlyBilling" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="contractType" class="form-label">Contract Type
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Billing frequency"></i>
+                                    </label>
+                                    <select class="form-select" id="contractType" required>
+                                        <option value="">Select...</option>
+                                        <option value="0">Monthly</option>
+                                        <option value="1">Annual</option>
+                                        <option value="2">Quarterly</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="numLogins" class="form-label">Logins (last 30 days)
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Number of times user logged in"></i>
+                                    </label>
+                                    <input type="number" class="form-control" id="numLogins" min="0" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="sessionDuration" class="form-label">Avg Session (mins)
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Average session duration"></i>
+                                    </label>
+                                    <input type="number" class="form-control" id="sessionDuration" min="0" step="1" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="numFeatures" class="form-label">Features Used
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Number of features actively used"></i>
+                                    </label>
+                                    <input type="number" class="form-control" id="numFeatures" min="0" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="featureAdoption" class="form-label">Feature Adoption (%)
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Percentage of available features used"></i>
+                                    </label>
+                                    <input type="number" class="form-control" id="featureAdoption" min="0" max="100" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="supportTickets" class="form-label">Support Tickets (last 30 days)
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Number of support tickets raised"></i>
+                                    </label>
+                                    <input type="number" class="form-control" id="supportTickets" min="0" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="resolutionTime" class="form-label">Avg Resolution (hours)
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Average time to resolve support tickets"></i>
+                                    </label>
+                                    <input type="number" class="form-control" id="resolutionTime" min="0" step="0.1" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="npsScore" class="form-label">NPS Score
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Net Promoter Score from surveys"></i>
+                                    </label>
+                                    <input type="number" class="form-control" id="npsScore" min="-100" max="100" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="paymentMethod" class="form-label">Payment Method
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Primary payment method"></i>
+                                    </label>
+                                    <select class="form-select" id="paymentMethod" required>
+                                        <option value="">Select...</option>
+                                        <option value="0">Credit Card</option>
+                                        <option value="1">Bank Transfer</option>
+                                        <option value="2">PayPal</option>
+                                        <option value="3">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="planType" class="form-label">Plan Type
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Current subscription plan"></i>
+                                    </label>
+                                    <select class="form-select" id="planType" required>
+                                        <option value="">Select...</option>
+                                        <option value="0">Basic</option>
+                                        <option value="1">Standard</option>
+                                        <option value="2">Premium</option>
+                                        <option value="3">Enterprise</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="autoRenewal" class="form-label">Auto Renewal
+                                        <i class="fas fa-info-circle tooltip-icon ms-1" title="Is auto-renewal enabled?"></i>
+                                    </label>
+                                    <select class="form-select" id="autoRenewal" required>
+                                        <option value="">Select...</option>
+                                        <option value="1">Enabled</option>
+                                        <option value="0">Disabled</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg px-4">
+                                    <i class="fas fa-bolt me-2"></i>Predict Churn Risk
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loadingSpinner" class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Analyzing customer data...</p>
+        </div>
+
+        <div id="results" class="row justify-content-center mt-4" style="display: none;">
+            <div class="col-lg-10">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h3 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Prediction Results & Recommendations</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="text-center mb-4">
+                                    <h4>This customer has a</h4>
+                                    <div class="result-highlight">
+                                        <span id="churnResultBadge" class="risk-badge risk-high">High Risk</span>
+                                    </div>
+                                    <div class="risk-indicator mt-3">
+                                        <div class="risk-pointer" id="riskPointer" style="left: 70%;"></div>
+                                    </div>
+                                    <p class="mt-2">Churn Probability: <span id="churnProbability">72</span>%</p>
+                                    <p class="text-muted">Confidence: <span id="confidenceScore">85</span>%</p>
+                                </div>
+                                <div class="chart-container mb-4">
+                                    <canvas id="probabilityChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-info">
+                                    <h5><i class="fas fa-lightbulb me-2"></i>Key Risk Factors</h5>
+                                    <div id="riskFactors">
+                                        <div class="d-flex align-items-center mb-3 p-2 bg-light rounded">
+                                            <div class="me-3 text-danger">
+                                                <i class="fas fa-exclamation-triangle fa-2x"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">High Support Volume</h6>
+                                                <p class="mb-0 text-muted">5 tickets in last 30 days (300% above average)</p>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-3 p-2 bg-light rounded">
+                                            <div class="me-3 text-warning">
+                                                <i class="fas fa-sign-in-alt fa-2x"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">Low Engagement</h6>
+                                                <p class="mb-0 text-muted">Only 3 logins in last month (80% below average)</p>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center p-2 bg-light rounded">
+                                            <div class="me-3 text-primary">
+                                                <i class="fas fa-calendar-times fa-2x"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">Critical Period</h6>
+                                                <p class="mb-0 text-muted">Month 2 of subscription has highest churn risk</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-success">
+                                    <h5><i class="fas fa-bullseye me-2"></i>Recommended Actions</h5>
+                                    <div id="recommendations">
+                                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Assign dedicated customer success manager</div>
+                                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Offer 15% discount for 3-month commitment</div>
+                                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Schedule product training session</div>
+                                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Provide escalation path for support issues</div>
+                                        <div><i class="fas fa-check-circle text-success me-2"></i>Send personalized onboarding checklist</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Engagement Trends</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="engagementChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h5 class="mb-0"><i class="fas fa-percentage me-2"></i>Feature Adoption</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="featureChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="insights" class="container mb-5">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold"><i class="fas fa-chart-pie me-2"></i>Churn Analysis Insights</h2>
+            <p class="lead">Key patterns and factors influencing customer churn</p>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Subscription Length Impact</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="subscriptionChart"></canvas>
+                        </div>
+                        <div class="insight-card p-3 mt-3 bg-light">
+                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Insight</h6>
+                            <p class="mb-0">Customers in months 2-3 of their subscription are 3.2x more likely to churn than long-term customers. Focus retention efforts during this critical period.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-ticket-alt me-2"></i>Support Ticket Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="supportChart"></canvas>
+                        </div>
+                        <div class="insight-card p-3 mt-3 bg-light">
+                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Insight</h6>
+                            <p class="mb-0">Customers filing 3+ support tickets in their first month have 68% higher churn rate. Proactive support can significantly reduce churn.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>Login Frequency</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="loginChart"></canvas>
+                        </div>
+                        <div class="insight-card p-3 mt-3 bg-light">
+                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Insight</h6>
+                            <p class="mb-0">Customers with fewer than 5 logins/month have 4.5x higher churn rate. Engagement campaigns can improve this metric.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-rupee-sign me-2"></i>Pricing Tier Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="pricingChart"></canvas>
+                        </div>
+                        <div class="insight-card p-3 mt-3 bg-light">
+                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Insight</h6>
+                            <p class="mb-0">Standard plan customers have highest churn (22%). Consider adding mid-tier features or adjusting pricing.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="segmentation" class="container mb-5">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold"><i class="fas fa-users me-2"></i>Customer Segmentation</h2>
+            <p class="lead">Identify at-risk customer segments for targeted retention</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card segmentation-card h-100">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>High Risk</h5>
+                    </div>
+                    <div class="card-body">
+                        <h2 class="text-danger">18%</h2>
+                        <p>of customer base</p>
+                        <div class="mb-3">
+                            <h6>Characteristics:</h6>
+                            <ul>
+                                <li>Low login frequency</li>
+                                <li>High support tickets</li>
+                                <li>New customers (0-3mo)</li>
+                            </ul>
+                        </div>
+                        <div class="alert alert-danger">
+                            <h6><i class="fas fa-bullhorn me-2"></i>Action Plan</h6>
+                            <p class="mb-0">Immediate intervention required. Assign CSM, offer incentives, and address pain points.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card segmentation-card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>Medium Risk</h5>
+                    </div>
+                    <div class="card-body">
+                        <h2 class="text-warning">32%</h2>
+                        <p>of customer base</p>
+                        <div class="mb-3">
+                            <h6>Characteristics:</h6>
+                            <ul>
+                                <li>Moderate engagement</li>
+                                <li>Some support contact</li>
+                                <li>4-12 month tenure</li>
+                            </ul>
+                        </div>
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-bullhorn me-2"></i>Action Plan</h6>
+                            <p class="mb-0">Proactive engagement. Educational content, check-ins, and upsell opportunities.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card segmentation-card h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Low Risk</h5>
+                    </div>
+                    <div class="card-body">
+                        <h2 class="text-success">50%</h2>
+                        <p>of customer base</p>
+                        <div class="mb-3">
+                            <h6>Characteristics:</h6>
+                            <ul>
+                                <li>High engagement</li>
+                                <li>Minimal support needs</li>
+                                <li>1+ year tenure</li>
+                            </ul>
+                        </div>
+                        <div class="alert alert-success">
+                            <h6><i class="fas fa-bullhorn me-2"></i>Action Plan</h6>
+                            <p class="mb-0">Nurture and expand. Focus on advocacy, referrals, and premium upgrades.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Segmentation Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="segmentationChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="trends" class="container mb-5">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold"><i class="fas fa-calendar-alt me-2"></i>Churn Trends & Forecast</h2>
+            <p class="lead">Historical patterns and future predictions</p>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Monthly Churn Rate</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="monthlyChurnChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Revenue Impact</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Churn ROI Calculator</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="currentChurn" class="form-label">Current Monthly Churn Rate (%)</label>
+                            <input type="number" class="form-control" id="currentChurn" value="5.2" step="0.1">
+                        </div>
+                        <div class="mb-3">
+                            <label for="targetChurn" class="form-label">Target Churn Rate (%)</label>
+                            <input type="number" class="form-control" id="targetChurn" value="3.5" step="0.1">
+                        </div>
+                        <div class="mb-3">
+                            <label for="avgRevenue" class="form-label">Average Monthly Revenue per Customer (₹)</label>
+                            <input type="number" class="form-control" id="avgRevenue" value="8500">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-coins me-2"></i>Potential Savings</h5>
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Monthly Revenue Saved:</span>
+                                    <strong id="monthlySavings">₹42,500</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Annual Revenue Saved:</span>
+                                    <strong id="annualSavings">₹510,000</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>3-Year Value:</span>
+                                    <strong id="threeYearValue">₹1,530,000</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary w-100" id="calculateBtn">
+                            <i class="fas fa-calculator me-2"></i>Calculate
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h5>SaaS Churn Predictor</h5>
+                    <p>AI-powered customer retention platform helping SaaS businesses reduce churn and increase customer lifetime value.</p>
+                </div>
+                <div class="col-md-2 mb-4 mb-md-0">
+                    <h5>Product</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white">Features</a></li>
+                        <li><a href="#" class="text-white">Pricing</a></li>
+                        <li><a href="#" class="text-white">API</a></li>
+                        <li><a href="#" class="text-white">Integrations</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2 mb-4 mb-md-0">
+                    <h5>Resources</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white">Documentation</a></li>
+                        <li><a href="#" class="text-white">Case Studies</a></li>
+                        <li><a href="#" class="text-white">Blog</a></li>
+                        <li><a href="#" class="text-white">Support</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Subscribe to Newsletter</h5>
+                    <p>Get the latest churn prevention tips and updates.</p>
+                    <div class="input-group mb-3">
+                        <input type="email" class="form-control" placeholder="Your email">
+                        <button class="btn btn-primary" type="button">Subscribe</button>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4 bg-light">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0">&copy; 2023 SaaS Churn Predictor. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <a href="#" class="text-white me-3"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-linkedin"></i></a>
+                    <a href="#" class="text-white me-3"><i class="fab fa-github"></i></a>
+                    <a href="#" class="text-white"><i class="fab fa-product-hunt"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Form submission
+            const predictionForm = document.getElementById('predictionForm');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const resultsSection = document.getElementById('results');
+
+            predictionForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show loading spinner
+                loadingSpinner.style.display = 'block';
+                resultsSection.style.display = 'none';
+                
+                // Simulate API call delay
+                setTimeout(function() {
+                    // Hide loading spinner
+                    loadingSpinner.style.display = 'none';
+                    
+                    // Generate random results for demo
+                    const riskLevel = Math.random();
+                    let riskCategory, riskColor, riskPosition;
+                    
+                    if (riskLevel < 0.3) {
+                        riskCategory = 'Low Risk';
+                        riskColor = 'risk-low';
+                        riskPosition = '15%';
+                    } else if (riskLevel < 0.7) {
+                        riskCategory = 'Medium Risk';
+                        riskColor = 'risk-medium';
+                        riskPosition = '50%';
+                    } else {
+                        riskCategory = 'High Risk';
+                        riskColor = 'risk-high';
+                        riskPosition = '85%';
+                    }
+                    
+                    const probability = Math.round(riskLevel * 100);
+                    const confidence = 80 + Math.floor(Math.random() * 15);
+                    
+                    // Update results
+                    document.getElementById('churnResultBadge').textContent = riskCategory;
+                    document.getElementById('churnResultBadge').className = `risk-badge ${riskColor}`;
+                    document.getElementById('riskPointer').style.left = riskPosition;
+                    document.getElementById('churnProbability').textContent = probability;
+                    document.getElementById('confidenceScore').textContent = confidence;
+                    
+                    // Update recommendations based on risk
+                    updateRecommendations(riskCategory);
+                    
+                    // Show results
+                    resultsSection.style.display = 'block';
+                    
+                    // Initialize charts
+                    initCharts(probability, riskCategory);
+                    
+                    // Scroll to results
+                    resultsSection.scrollIntoView({ behavior: 'smooth' });
+                }, 1500);
+            });
+            
+            // Update recommendations based on risk level
+            function updateRecommendations(riskCategory) {
+                const recommendationsDiv = document.getElementById('recommendations');
+                let recommendationsHTML = '';
+                
+                if (riskCategory === 'High Risk') {
+                    recommendationsHTML = `
+                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Assign dedicated customer success manager</div>
+                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Offer 15% discount for 3-month commitment</div>
+                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Schedule product training session</div>
+                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Provide escalation path for support issues</div>
+                        <div><i class="fas fa-check-circle text-success me-2"></i>Send personalized onboarding checklist</div>
+                    `;
+                } else if (riskCategory === 'Medium Risk') {
+                    recommendationsHTML = `
+                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Send monthly engagement newsletter</div>
+                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Offer free webinar on advanced features</div>
+                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Check-in call from account manager</div>
+                        <div><i class="fas fa-check-circle text-success me-2"></i>Provide case studies of similar customers</div>
+                    `;
+                } else {
+                    recommendationsHTML = `
+                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Invite to customer advisory board</div>
+                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Offer referral bonus program</div>
+                        <div class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Upsell to premium features</div>
+                        <div><i class="fas fa-check-circle text-success me-2"></i>Request testimonial or case study</div>
+                    `;
+                }
+                
+                recommendationsDiv.innerHTML = recommendationsHTML;
+            }
+            
+            // Initialize all charts
+            function initCharts(probability, riskCategory) {
+                // Probability chart
+                const probabilityCtx = document.getElementById('probabilityChart').getContext('2d');
+                new Chart(probabilityCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Churn Risk', 'Retention Likelihood'],
+                        datasets: [{
+                            data: [probability, 100 - probability],
+                            backgroundColor: [
+                                riskCategory === 'High Risk' ? '#e74c3c' : 
+                                riskCategory === 'Medium Risk' ? '#f39c12' : '#2ecc71',
+                                '#ecf0f1'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+                
+                // Engagement chart
+                const engagementCtx = document.getElementById('engagementChart').getContext('2d');
+                new Chart(engagementCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                        datasets: [{
+                            label: 'Monthly Logins',
+                            data: [12, 19, 15, 8, 5, 3],
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                
+                // Feature chart
+                const featureCtx = document.getElementById('featureChart').getContext('2d');
+                new Chart(featureCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Feature A', 'Feature B', 'Feature C', 'Feature D', 'Feature E'],
+                        datasets: [{
+                            label: 'Usage Frequency',
+                            data: [85, 59, 42, 28, 15],
+                            backgroundColor: [
+                                'rgba(52, 152, 219, 0.7)',
+                                'rgba(52, 152, 219, 0.7)',
+                                'rgba(52, 152, 219, 0.7)',
+                                'rgba(52, 152, 219, 0.7)',
+                                'rgba(52, 152, 219, 0.7)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                
+                // Subscription chart
+                const subscriptionCtx = document.getElementById('subscriptionChart').getContext('2d');
+                new Chart(subscriptionCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['0-1', '2-3', '4-6', '7-12', '13-24', '25+'],
+                        datasets: [{
+                            label: 'Churn Rate by Month',
+                            data: [12, 22, 15, 9, 6, 4],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(46, 204, 113, 0.7)',
+                                'rgba(46, 204, 113, 0.7)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Churn Rate (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Subscription Month'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Support chart
+                const supportCtx = document.getElementById('supportChart').getContext('2d');
+                new Chart(supportCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['0', '1', '2', '3', '4', '5+'],
+                        datasets: [{
+                            label: 'Churn Rate',
+                            data: [8, 12, 18, 25, 34, 42],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Churn Rate (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Support Tickets (last 30 days)'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Login chart
+                const loginCtx = document.getElementById('loginChart').getContext('2d');
+                new Chart(loginCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['0-2', '3-5', '6-10', '11-20', '21+'],
+                        datasets: [{
+                            label: 'Churn Rate',
+                            data: [38, 22, 12, 7, 5],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(46, 204, 113, 0.7)',
+                                'rgba(46, 204, 113, 0.7)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Churn Rate (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Monthly Logins'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Pricing chart
+                const pricingCtx = document.getElementById('pricingChart').getContext('2d');
+                new Chart(pricingCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Basic', 'Standard', 'Premium', 'Enterprise'],
+                        datasets: [{
+                            data: [18, 22, 14, 9],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(46, 204, 113, 0.7)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+                
+                // Segmentation chart
+                const segmentationCtx = document.getElementById('segmentationChart').getContext('2d');
+                new Chart(segmentationCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+                        datasets: [{
+                            label: 'Churn Rate',
+                            data: [42, 18, 6],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(46, 204, 113, 0.7)'
+                            ]
+                        }, {
+                            label: 'Customer Count',
+                            data: [85, 150, 250],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.3)',
+                                'rgba(243, 156, 18, 0.3)',
+                                'rgba(46, 204, 113, 0.3)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                
+                // Monthly churn chart
+                const monthlyChurnCtx = document.getElementById('monthlyChurnChart').getContext('2d');
+                new Chart(monthlyChurnCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                        datasets: [{
+                            label: 'Monthly Churn Rate',
+                            data: [6.2, 5.8, 6.5, 5.2, 4.9, 5.1, 4.8, 4.5, 4.2, 4.0, 3.9, 3.7],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Churn Rate (%)'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Revenue chart
+                const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+                new Chart(revenueCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                        datasets: [{
+                            label: 'Revenue Lost to Churn',
+                            data: [42000, 39000, 45000, 37000, 35000, 36000, 34000, 32000, 30000, 29000, 28000, 27000],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Revenue (₹)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // ROI Calculator
+            const calculateBtn = document.getElementById('calculateBtn');
+            calculateBtn.addEventListener('click', function() {
+                const currentChurn = parseFloat(document.getElementById('currentChurn').value);
+                const targetChurn = parseFloat(document.getElementById('targetChurn').value);
+                const avgRevenue = parseFloat(document.getElementById('avgRevenue').value);
+                const customerCount = 1000; // Assuming 1000 customers for demo
+                
+                const monthlySavings = (currentChurn - targetChurn) / 100 * customerCount * avgRevenue;
+                const annualSavings = monthlySavings * 12;
+                const threeYearValue = annualSavings * 3;
+                
+                document.getElementById('monthlySavings').textContent = '₹' + monthlySavings.toLocaleString('en-IN');
+                document.getElementById('annualSavings').textContent = '₹' + annualSavings.toLocaleString('en-IN');
+                document.getElementById('threeYearValue').textContent = '₹' + threeYearValue.toLocaleString('en-IN');
+            });
+            
+            // Initialize tooltips
+            const tooltipIcons = document.querySelectorAll('.tooltip-icon');
+            tooltipIcons.forEach(icon => {
+                icon.addEventListener('mouseover', function() {
+                    const title = this.getAttribute('title');
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'custom-tooltip';
+                    tooltip.innerHTML = title;
+                    tooltip.style.position = 'absolute';
+                    tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                    tooltip.style.color = 'white';
+                    tooltip.style.padding = '5px 10px';
+                    tooltip.style.borderRadius = '4px';
+                    tooltip.style.zIndex = '1000';
+                    tooltip.style.maxWidth = '200px';
+                    
+                    const rect = this.getBoundingClientRect();
+                    tooltip.style.left = (rect.left + window.scrollX) + 'px';
+                    tooltip.style.top = (rect.top + window.scrollY - 35) + 'px';
+                    
+                    document.body.appendChild(tooltip);
+                    
+                    this.addEventListener('mouseout', function() {
+                        document.body.removeChild(tooltip);
+                    });
+                });
+            });
+            
+            // Initialize all insight charts on page load
+            initInsightCharts();
+            
+            function initInsightCharts() {
+                // Subscription chart
+                const subscriptionCtx = document.getElementById('subscriptionChart').getContext('2d');
+                new Chart(subscriptionCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['0-1', '2-3', '4-6', '7-12', '13-24', '25+'],
+                        datasets: [{
+                            label: 'Churn Rate by Month',
+                            data: [12, 22, 15, 9, 6, 4],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(46, 204, 113, 0.7)',
+                                'rgba(46, 204, 113, 0.7)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Churn Rate (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Subscription Month'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Support chart
+                const supportCtx = document.getElementById('supportChart').getContext('2d');
+                new Chart(supportCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['0', '1', '2', '3', '4', '5+'],
+                        datasets: [{
+                            label: 'Churn Rate',
+                            data: [8, 12, 18, 25, 34, 42],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Churn Rate (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Support Tickets (last 30 days)'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Login chart
+                const loginCtx = document.getElementById('loginChart').getContext('2d');
+                new Chart(loginCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['0-2', '3-5', '6-10', '11-20', '21+'],
+                        datasets: [{
+                            label: 'Churn Rate',
+                            data: [38, 22, 12, 7, 5],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(46, 204, 113, 0.7)',
+                                'rgba(46, 204, 113, 0.7)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Churn Rate (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Monthly Logins'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Pricing chart
+                const pricingCtx = document.getElementById('pricingChart').getContext('2d');
+                new Chart(pricingCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Basic', 'Standard', 'Premium', 'Enterprise'],
+                        datasets: [{
+                            data: [18, 22, 14, 9],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(46, 204, 113, 0.7)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+                
+                // Segmentation chart
+                const segmentationCtx = document.getElementById('segmentationChart').getContext('2d');
+                new Chart(segmentationCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+                        datasets: [{
+                            label: 'Churn Rate',
+                            data: [42, 18, 6],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(46, 204, 113, 0.7)'
+                            ]
+                        }, {
+                            label: 'Customer Count',
+                            data: [85, 150, 250],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.3)',
+                                'rgba(243, 156, 18, 0.3)',
+                                'rgba(46, 204, 113, 0.3)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                
+                // Monthly churn chart
+                const monthlyChurnCtx = document.getElementById('monthlyChurnChart').getContext('2d');
+                new Chart(monthlyChurnCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                        datasets: [{
+                            label: 'Monthly Churn Rate',
+                            data: [6.2, 5.8, 6.5, 5.2, 4.9, 5.1, 4.8, 4.5, 4.2, 4.0, 3.9, 3.7],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Churn Rate (%)'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Revenue chart
+                const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+                new Chart(revenueCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                        datasets: [{
+                            label: 'Revenue Lost to Churn',
+                            data: [42000, 39000, 45000, 37000, 35000, 36000, 34000, 32000, 30000, 29000, 28000, 27000],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Revenue (₹)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
